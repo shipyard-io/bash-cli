@@ -55,11 +55,18 @@ else
 fi
 
 echo ""
-echo -e "${YELLOW}>>> BƯỚC 2: CẤU HÌNH ỨNG DỤNG${NC}"
+echo -e "${YELLOW}>>> BƯỚC 2: THÔNG BÁO TELEGRAM${NC}"
+read -p "Nhập Telegram Bot Token: " TELEGRAM_BOT_TOKEN
+read -p "Nhập Telegram Chat ID: " TELEGRAM_CHAT_ID
+
+echo ""
+echo -e "${YELLOW}>>> BƯỚC 3: CẤU HÌNH ỨNG DỤNG${NC}"
 read -p "Nhập tên ứng dụng (APP_NAME): " APP_NAME
 read -p "Nhập tên miền (APP_DOMAIN): " APP_DOMAIN
 read -p "Nhập cổng ứng dụng (APP_PORT - mặc định: 80): " APP_PORT
 APP_PORT=${APP_PORT:-80}
+read -p "Đường dẫn Health Check (mặc định: /): " HEALTH_CHECK_PATH
+HEALTH_CHECK_PATH=${HEALTH_CHECK_PATH:-/}
 
 # Kiểm tra DNS
 if [ -n "$APP_DOMAIN" ]; then
@@ -76,32 +83,29 @@ fi
 ENV_CONTENT="APP_NAME=$APP_NAME
 APP_PORT=$APP_PORT
 APP_DOMAIN=$APP_DOMAIN
-HEALTH_CHECK_PATH=/
+HEALTH_CHECK_PATH=$HEALTH_CHECK_PATH
 INIT_INFRA=true"
 
 echo ""
-echo -e "${YELLOW}>>> BƯỚC 3: CÀI ĐẶT GITHUB SECRETS${NC}"
+echo -e "${YELLOW}>>> BƯỚC 4: CÀI ĐẶT GITHUB SECRETS${NC}"
 info "Đang chuẩn bị đẩy secrets lên GitHub..."
 
-# Ghi key vào biến tạm
 SSH_KEY_DATA=$(cat "$SSH_KEY_PATH")
 
 # Đẩy các secret chính
-info "Cài đặt SERVER_IP..."
 echo "$SERVER_IP" | gh secret set SERVER_IP
-info "Cài đặt SERVER_USER..."
 echo "$SERVER_USER" | gh secret set SERVER_USER
-info "Cài đặt SSH_PRIVATE_KEY..."
 echo "$SSH_KEY_DATA" | gh secret set SSH_PRIVATE_KEY
-info "Cài đặt ENV_FILE_CONTENT..."
 echo "$ENV_CONTENT" | gh secret set ENV_FILE_CONTENT
+echo "$TELEGRAM_BOT_TOKEN" | gh secret set TELEGRAM_BOT_TOKEN
+echo "$TELEGRAM_CHAT_ID" | gh secret set TELEGRAM_CHAT_ID
 
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 success "TẤT CẢ ĐÃ SẴN SÀNG!"
 echo -e "Tên ứng dụng: ${CYAN}$APP_NAME${NC}"
 echo -e "Tên miền:     ${CYAN}$APP_DOMAIN${NC}"
-echo -e "Server IP:    ${CYAN}$SERVER_IP${NC}"
+echo -e "Telegram:     ${CYAN}Đã cấu hình${NC}"
 echo -e ""
 echo -e "Bây giờ bạn có thể push code để kích hoạt Pipeline."
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"

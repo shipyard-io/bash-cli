@@ -3,10 +3,10 @@
 An interactive CLI to bootstrap your Shipyard-based projects and automate GitHub Secrets configuration.
 
 ## Features
-- **Zero Config**: Automates the creation of complex GitHub Secrets.
+- **Zero Config**: Automates the creation of all required GitHub Secrets.
 - **Validation**: Checks SSH connectivity and DNS resolution before setting up.
+- **Notification Setup**: Configures Telegram bots for deployment alerts.
 - **Automation**: Uses GitHub CLI to automatically sync infrastructure and application settings.
-- **Simplicity**: No manual entry in the GitHub UI required.
 
 ## Prerequisites
 1. [GitHub CLI (gh)](https://cli.github.com/) installed and authenticated (`gh auth login`).
@@ -28,8 +28,12 @@ The script will interactively ask for information and set the following **GitHub
 - `SERVER_USER`: SSH username (defaults to `root`).
 - `SSH_PRIVATE_KEY`: Your private key content for secure access.
 
+### 📢 Notification Secrets
+- `TELEGRAM_BOT_TOKEN`: Your Telegram Bot API token.
+- `TELEGRAM_CHAT_ID`: The ID of the chat where notifications will be sent.
+
 ### 📝 Application Secret (`ENV_FILE_CONTENT`)
-Instead of multiple secrets, we consolidate app settings into a single `ENV_FILE_CONTENT` secret. The CLI automatically formats this with:
+This secret consolidates app settings into a single block:
 - `APP_NAME`: Your application's identifier.
 - `APP_PORT`: Internal port the app listens on (default: `80`).
 - `APP_DOMAIN`: Your production domain.
