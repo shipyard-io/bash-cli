@@ -22,7 +22,7 @@ echo "  ___) | | | | | |_) | |_| | (_| | | | (_| |"
 echo " |____/|_| |_|_| .__/ \__, |\__,_|_|  \__,_|"
 echo "               |_|    |___/                 "
 echo -e "${NC}"
-echo -e "--- Shipyard Infrastructure Setup CLI ---"
+echo -e "--- Shipyard Zero-Touch Setup CLI ---"
 echo ""
 
 # 1. Kiểm tra GitHub CLI
@@ -32,6 +32,12 @@ fi
 
 if ! gh auth status &> /dev/null; then
     error "Bạn chưa đăng nhập GitHub CLI. Vui lòng chạy: gh auth login"
+fi
+
+# Lấy thông tin Repo hiện tại
+REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
+if [ -z "$REPO" ]; then
+    error "Không tìm thấy thông tin repository. Vui lòng đảm bảo bạn đang ở trong thư mục git đã được push lên GitHub."
 fi
 
 # 2. Thu thập thông tin
@@ -79,33 +85,53 @@ if [ -n "$APP_DOMAIN" ]; then
     fi
 fi
 
+# 4. Thu thập biến môi trường tùy chỉnh (Custom ENV)
+echo ""
+echo -e "${YELLOW}>>> BƯỚC 4: BIẾN MÔI TRƯỜNG TÙY CHỈNH (Optional)${NC}"
+echo -e "Nhập các biến môi trường khác (ví dụ: DB_PASSWORD=secret). Nhấn Enter trống để kết thúc."
+CUSTOM_ENVS=""
+while true; do
+    read -p "Nhập biến (KEY=VALUE): " ENV_ENTRY
+    if [ -z "$ENV_ENTRY" ]; then
+        break
+    fi
+    CUSTOM_ENVS="${CUSTOM_ENVS}${ENV_ENTRY}"$'\n'
+done
+
 # 3. Tạo ENV_FILE_CONTENT
 ENV_CONTENT="APP_NAME=$APP_NAME
 APP_PORT=$APP_PORT
 APP_DOMAIN=$APP_DOMAIN
 HEALTH_CHECK_PATH=$HEALTH_CHECK_PATH
-INIT_INFRA=true"
+INIT_INFRA=true
+$CUSTOM_ENVS"
 
 echo ""
-echo -e "${YELLOW}>>> BƯỚC 4: CÀI ĐẶT GITHUB SECRETS${NC}"
-info "Đang chuẩn bị đẩy secrets lên GitHub..."
+echo -e "${YELLOW}>>> BƯỚC 5: CÀI ĐẶT GITHUB SECRETS TỰ ĐỘNG${NC}"
+info "Đang thiết lập toàn bộ Secrets cho repo: ${CYAN}$REPO${NC}"
 
 SSH_KEY_DATA=$(cat "$SSH_KEY_PATH")
 
-# Đẩy các secret chính
-echo "$SERVER_IP" | gh secret set SERVER_IP
-echo "$SERVER_USER" | gh secret set SERVER_USER
-echo "$SSH_KEY_DATA" | gh secret set SSH_PRIVATE_KEY
-echo "$ENV_CONTENT" | gh secret set ENV_FILE_CONTENT
-echo "$TELEGRAM_BOT_TOKEN" | gh secret set TELEGRAM_BOT_TOKEN
-echo "$TELEGRAM_CHAT_ID" | gh secret set TELEGRAM_CHAT_ID
+# Đẩy tất cả các secret một cách đồng loạt
+(
+  echo "SERVER_IP=$SERVER_IP"
+  echo "SERVER_USER=$SERVER_USER"
+  echo "SSH_PRIVATE_KEY=$SSH_KEY_DATA"
+  echo "ENV_FILE_CONTENT=$ENV_CONTENT"
+  echo "TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN"
+  echo "TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID"
+) | while IFS='=' read -r key value; do
+    info "Đang cài đặt Secret: ${CYAN}$key${NC}..."
+    echo "$value" | gh secret set "$key"
+done
 
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-success "TẤT CẢ ĐÃ SẴN SÀNG!"
-echo -e "Tên ứng dụng: ${CYAN}$APP_NAME${NC}"
-echo -e "Tên miền:     ${CYAN}$APP_DOMAIN${NC}"
-echo -e "Telegram:     ${CYAN}Đã cấu hình${NC}"
+success "CẤU HÌNH HOÀN TẤT!"
+echo -e "Dự án:        ${CYAN}$REPO${NC}"
+echo -e "Ứng dụng:     ${CYAN}$APP_NAME${NC}"
+echo -e "Trạng thái:   ${GREEN}Sẵn sàng Deploy${NC}"
 echo -e ""
-echo -e "Bây giờ bạn có thể push code để kích hoạt Pipeline."
+echo -e "Bây giờ bạn chỉ cần chạy lệnh sau để deploy:"
+echo -e "${YELLOW}git add . && git commit -m 'initial setup' && git push origin main${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
