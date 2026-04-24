@@ -43,13 +43,17 @@ fi
 # 2. Thu thập thông tin
 echo -e "${YELLOW}>>> BƯỚC 1: THÔNG TIN SERVER${NC}"
 read -p "Nhập địa chỉ IP Server (SERVER_IP): " SERVER_IP
+if [ -z "$SERVER_IP" ]; then error "SERVER_IP không được để trống"; fi
+
 read -p "Nhập SSH User (mặc định: root): " SERVER_USER
 SERVER_USER=${SERVER_USER:-root}
-read -p "Đường dẫn tới file SSH Private Key (mặc định: ~/.ssh/id_rsa): " SSH_KEY_PATH
-SSH_KEY_PATH=${SSH_KEY_PATH:-$HOME/.ssh/id_rsa}
 
+read -p "Đường dẫn tới file SSH Private Key (mặc định: ~/.ssh/id_rsa): " SSH_KEY_INPUT
+SSH_KEY_PATH=${SSH_KEY_INPUT:-$HOME/.ssh/id_rsa}
+
+# Kiểm tra file key sau khi đã có input
 if [ ! -f "$SSH_KEY_PATH" ]; then
-    error "Không tìm thấy file SSH key tại $SSH_KEY_PATH"
+    error "Không tìm thấy file SSH key tại: $SSH_KEY_PATH"
 fi
 
 # Kiểm tra SSH
