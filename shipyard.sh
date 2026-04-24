@@ -42,7 +42,7 @@ fi
 
 # 2. Thu thập thông tin
 echo -e "${YELLOW}>>> BƯỚC 1: THÔNG TIN SERVER${NC}"
-read -p "Nhập địa chỉ IP Server: " SERVER_IP
+read -p "Nhập địa chỉ IP Server (SERVER_IP): " SERVER_IP
 read -p "Nhập SSH User (mặc định: root): " SERVER_USER
 SERVER_USER=${SERVER_USER:-root}
 read -p "Đường dẫn tới file SSH Private Key (mặc định: ~/.ssh/id_rsa): " SSH_KEY_PATH
@@ -62,19 +62,20 @@ fi
 
 echo ""
 echo -e "${YELLOW}>>> BƯỚC 2: THÔNG BÁO TELEGRAM${NC}"
-read -p "Nhập Telegram Bot Token: " TELEGRAM_BOT_TOKEN
-read -p "Nhập Telegram Chat ID: " TELEGRAM_CHAT_ID
+read -p "Nhập Telegram Bot Token (TELEGRAM_BOT_TOKEN): " TELEGRAM_BOT_TOKEN
+read -p "Nhập Telegram Chat ID (TELEGRAM_CHAT_ID): " TELEGRAM_CHAT_ID
 
 echo ""
 echo -e "${YELLOW}>>> BƯỚC 3: CẤU HÌNH ỨNG DỤNG${NC}"
 read -p "Nhập tên ứng dụng (APP_NAME): " APP_NAME
-read -p "Nhập tên miền (APP_DOMAIN): " APP_DOMAIN
+read -p "Nhập tên miền Production (APP_DOMAIN): " APP_DOMAIN
+read -p "Nhập tên miền cơ sở (DOMAIN): " DOMAIN
 read -p "Nhập cổng ứng dụng (APP_PORT - mặc định: 80): " APP_PORT
 APP_PORT=${APP_PORT:-80}
 read -p "Đường dẫn Health Check (mặc định: /): " HEALTH_CHECK_PATH
 HEALTH_CHECK_PATH=${HEALTH_CHECK_PATH:-/}
 
-# Kiểm tra DNS
+# Kiểm tra DNS cho APP_DOMAIN
 if [ -n "$APP_DOMAIN" ]; then
     info "Đang kiểm tra DNS cho $APP_DOMAIN..."
     DOMAIN_IP=$(dig +short "$APP_DOMAIN" | tail -n1)
@@ -98,10 +99,11 @@ while true; do
     CUSTOM_ENVS="${CUSTOM_ENVS}${ENV_ENTRY}"$'\n'
 done
 
-# 3. Tạo ENV_FILE_CONTENT
+# 5. Tạo nội dung file ENV (Sẽ được lưu vào ENV_FILE_CONTENT)
 ENV_CONTENT="APP_NAME=$APP_NAME
 APP_PORT=$APP_PORT
 APP_DOMAIN=$APP_DOMAIN
+DOMAIN=$DOMAIN
 HEALTH_CHECK_PATH=$HEALTH_CHECK_PATH
 INIT_INFRA=true
 $CUSTOM_ENVS"
@@ -112,18 +114,19 @@ info "Đang thiết lập toàn bộ Secrets cho repo: ${CYAN}$REPO${NC}"
 
 SSH_KEY_DATA=$(cat "$SSH_KEY_PATH")
 
-# Đẩy tất cả các secret một cách đồng loạt
-(
-  echo "SERVER_IP=$SERVER_IP"
-  echo "SERVER_USER=$SERVER_USER"
-  echo "SSH_PRIVATE_KEY=$SSH_KEY_DATA"
-  echo "ENV_FILE_CONTENT=$ENV_CONTENT"
-  echo "TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN"
-  echo "TELEGRAM_CHAT_ID=$TELEGRAM_CHAT_ID"
-) | while IFS='=' read -r key value; do
-    info "Đang cài đặt Secret: ${CYAN}$key${NC}..."
-    echo "$value" | gh secret set "$key"
-done
+# Đẩy từng Secret lên GitHub
+info "Cài đặt SERVER_IP..."
+echo "$SERVER_IP" | gh secret set SERVER_IP
+info "Cài đặt SERVER_USER..."
+echo "$SERVER_USER" | gh secret set SERVER_USER
+info "Cài đặt SSH_PRIVATE_KEY..."
+echo "$SSH_KEY_DATA" | gh secret set SSH_PRIVATE_KEY
+info "Cài đặt TELEGRAM_BOT_TOKEN..."
+echo "$TELEGRAM_BOT_TOKEN" | gh secret set TELEGRAM_BOT_TOKEN
+info "Cài đặt TELEGRAM_CHAT_ID..."
+echo "$TELEGRAM_CHAT_ID" | gh secret set TELEGRAM_CHAT_ID
+info "Cài đặt ENV_FILE_CONTENT..."
+echo "$ENV_CONTENT" | gh secret set ENV_FILE_CONTENT
 
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
