@@ -89,15 +89,26 @@ fi
 # 4. Thu thập biến môi trường tùy chỉnh (Custom ENV)
 echo ""
 echo -e "${YELLOW}>>> BƯỚC 4: BIẾN MÔI TRƯỜNG TÙY CHỈNH (Optional)${NC}"
-echo -e "Nhập các biến môi trường khác (ví dụ: DB_PASSWORD=secret). Nhấn Enter trống để kết thúc."
+echo -e "Bạn muốn nhập biến môi trường như thế nào?"
+echo "1) Nhập từng dòng (Key=Value)"
+echo "2) Dán nguyên khối (Bulk Paste từ file .env)"
+read -p "Lựa chọn của bạn (1 hoặc 2): " ENV_MODE
+
 CUSTOM_ENVS=""
-while true; do
-    read -p "Nhập biến (KEY=VALUE): " ENV_ENTRY
-    if [ -z "$ENV_ENTRY" ]; then
-        break
-    fi
-    CUSTOM_ENVS="${CUSTOM_ENVS}${ENV_ENTRY}"$'\n'
-done
+if [ "$ENV_MODE" == "2" ]; then
+    echo -e "${BLUE}Hãy dán nội dung .env của bạn vào đây.${NC}"
+    echo -e "${YELLOW}(Dán xong nhấn Ctrl+D để kết thúc)${NC}"
+    CUSTOM_ENVS=$(cat)
+else
+    echo -e "Nhập các biến môi trường (ví dụ: DB_PASSWORD=secret). Nhấn Enter trống để kết thúc."
+    while true; do
+        read -p "Nhập biến (KEY=VALUE): " ENV_ENTRY
+        if [ -z "$ENV_ENTRY" ]; then
+            break
+        fi
+        CUSTOM_ENVS="${CUSTOM_ENVS}${ENV_ENTRY}"$'\n'
+    done
+fi
 
 # 5. Tạo nội dung file ENV (Sẽ được lưu vào ENV_FILE_CONTENT)
 ENV_CONTENT="APP_NAME=$APP_NAME
