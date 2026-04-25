@@ -59,6 +59,7 @@ ask_choice() {
 
   if command -v fzf >/dev/null 2>&1; then
     choice=$(printf "%s\n" "${options[@]}" | fzf --height 10 --reverse --border --prompt "➜ $prompt > ")
+    stty sane < /dev/tty 2>/dev/null || true
   fi
 
   if [ -z "$choice" ]; then
