@@ -9,10 +9,62 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Hàm in thông báo
-info() { echo -e "${BLUE}[INFO]${NC} $*"; }
-success() { echo -e "${GREEN}[SUCCESS]${NC} $*"; }
-warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
-error() { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
+info() { printf "${BLUE}[INFO]${NC} %s\n" "$*"; }
+success() { printf "${GREEN}[SUCCESS]${NC} %s\n" "$*"; }
+warn() { printf "${YELLOW}[WARN]${NC} %s\n" "$*"; }
+error() { printf "${RED}[ERROR]${NC} %s\n" "$*"; exit 1; }
+
+# Hàm hỏi thông tin (Premium UI)
+ask() {
+    local prompt="$1"
+    local default="$2"
+    local is_secret="$3"
+    local value
+
+    printf "${CYAN}➜ %s${NC}" "$prompt" >&2
+    if [ -n "$default" ]; then
+        printf " (mặc định: ${YELLOW}%s${NC})" "$default" >&2
+    fi
+    printf ": " >&2
+
+    if [ "$is_secret" = "true" ]; then
+        stty -echo
+        read -r value < /dev/tty
+        stty echo
+        printf "\n" >&2
+    else
+        read -r value < /dev/tty
+    fi
+
+    echo "${value:-$default}"
+}
+
+# Hàm chọn lựa (Sử dụng fzf nếu có)
+ask_choice() {
+    local prompt="$1"
+    shift
+    local options=("$@")
+    local choice
+
+    if command -v fzf &> /dev/null; then
+        choice=$(printf "%s\n" "${options[@]}" | fzf --height 5 --reverse --header "➜ $prompt" --border rounded)
+    fi
+
+    if [ -z "$choice" ]; then
+        # Fallback nếu không có fzf hoặc user hủy
+        printf "${CYAN}➜ %s${NC}\n" "$prompt" >&2
+        local i=1
+        for opt in "${options[@]}"; do
+            printf "  %d) %s\n" "$i" "$opt" >&2
+            i=$((i+1))
+        done
+        local idx
+        printf "Lựa chọn của bạn (1-%d): " "$((i-1))" >&2
+        read -r idx < /dev/tty
+        choice="${options[$((idx-1))]}"
+    fi
+    echo "$choice"
+}
 
 echo -e "${CYAN}"
 echo "  ____  _     _                           _ "
@@ -47,14 +99,16 @@ fi
 
 # 2. Thu thập thông tin
 echo -e "${YELLOW}>>> BƯỚC 1: THÔNG TIN SERVER${NC}"
-read -p "Nhập địa chỉ IP Server (SERVER_IP): " SERVER_IP < /dev/tty
-if [ -z "$SERVER_IP" ]; then error "SERVER_IP không được để trống"; fi
+SERVER_IP=$(ask "Địa chỉ IP Server (SERVER_IP)")
+while [ -z "$SERVER_IP" ]; do
+    warn "SERVER_IP không được để trống"
+    SERVER_IP=$(ask "Địa chỉ IP Server (SERVER_IP)")
+done
 
-read -p "Nhập SSH User (mặc định: root): " SERVER_USER < /dev/tty
-SERVER_USER=${SERVER_USER:-root}
+SERVER_USER=$(ask "SSH User" "root")
 
-read -p "Đường dẫn tới file SSH Private Key (mặc định: ~/.ssh/id_rsa): " SSH_KEY_INPUT < /dev/tty
-SSH_KEY_PATH=${SSH_KEY_INPUT:-$HOME/.ssh/id_rsa}
+SSH_KEY_INPUT=$(ask "Đường dẫn SSH Private Key" "$HOME/.ssh/id_rsa")
+SSH_KEY_PATH=$SSH_KEY_INPUT
 
 # Kiểm tra file key sau khi đã có input
 if [ ! -f "$SSH_KEY_PATH" ]; then
@@ -72,20 +126,18 @@ fi
 
 echo ""
 echo -e "${YELLOW}>>> BƯỚC 2: THÔNG BÁO TELEGRAM (Optional)${NC}"
-read -p "Nhập Telegram Bot Token (TELEGRAM_BOT_TOKEN): " TELEGRAM_BOT_TOKEN < /dev/tty
-read -p "Nhập Telegram Chat ID (TELEGRAM_CHAT_ID): " TELEGRAM_CHAT_ID < /dev/tty
+TELEGRAM_BOT_TOKEN=$(ask "Telegram Bot Token" "" "true")
+TELEGRAM_CHAT_ID=$(ask "Telegram Chat ID")
 
 echo ""
 echo -e "${YELLOW}>>> BƯỚC 3: CẤU HÌNH ỨNG DỤNG${NC}"
 while [ -z "$APP_NAME" ]; do
-    read -p "Nhập tên ứng dụng (APP_NAME - bắt buộc): " APP_NAME < /dev/tty
+    APP_NAME=$(ask "Tên ứng dụng (APP_NAME - bắt buộc)")
 done
-read -p "Nhập tên miền Production (APP_DOMAIN): " APP_DOMAIN < /dev/tty
-read -p "Nhập tên miền cơ sở (DOMAIN): " DOMAIN < /dev/tty
-read -p "Nhập cổng ứng dụng (APP_PORT - mặc định: 80): " APP_PORT < /dev/tty
-APP_PORT=${APP_PORT:-80}
-read -p "Đường dẫn Health Check (mặc định: /): " HEALTH_CHECK_PATH < /dev/tty
-HEALTH_CHECK_PATH=${HEALTH_CHECK_PATH:-/}
+APP_DOMAIN=$(ask "Tên miền Production (APP_DOMAIN)")
+DOMAIN=$(ask "Tên miền cơ sở (DOMAIN)")
+APP_PORT=$(ask "Cổng ứng dụng (APP_PORT)" "80")
+HEALTH_CHECK_PATH=$(ask "Đường dẫn Health Check" "/")
 
 # Kiểm tra DNS cho APP_DOMAIN
 if [ -n "$APP_DOMAIN" ] && [ "$HAS_DIG" = true ]; then
@@ -107,20 +159,17 @@ fi
 # 4. Thu thập biến môi trường tùy chỉnh (Custom ENV)
 echo ""
 echo -e "${YELLOW}>>> BƯỚC 4: BIẾN MÔI TRƯỜNG TÙY CHỈNH (Optional)${NC}"
-echo -e "Bạn muốn nhập biến môi trường như thế nào?"
-echo "1) Nhập từng dòng (Key=Value)"
-echo "2) Dán nguyên khối (Bulk Paste từ file .env)"
-read -p "Lựa chọn của bạn (1 hoặc 2): " ENV_MODE < /dev/tty
+ENV_MODE=$(ask_choice "Bạn muốn nhập biến môi trường như thế nào?" "Nhập từng dòng (Key=Value)" "Dán nguyên khối (Bulk Paste từ file .env)")
 
 CUSTOM_ENVS=""
-if [ "$ENV_MODE" == "2" ]; then
+if [[ "$ENV_MODE" == *"Bulk Paste"* ]] || [ "$ENV_MODE" == "2" ]; then
     echo -e "${BLUE}Hãy dán nội dung .env của bạn vào đây.${NC}"
     echo -e "${YELLOW}(Dán xong nhấn Ctrl+D để kết thúc)${NC}"
     CUSTOM_ENVS=$(cat < /dev/tty)
 else
     echo -e "Nhập các biến môi trường (ví dụ: DB_PASSWORD=secret). Nhấn Enter trống để kết thúc."
     while true; do
-        read -p "Nhập biến (KEY=VALUE): " ENV_ENTRY < /dev/tty
+        ENV_ENTRY=$(ask "Nhập biến (KEY=VALUE)")
         if [ -z "$ENV_ENTRY" ]; then
             break
         fi
