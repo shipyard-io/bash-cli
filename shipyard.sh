@@ -236,6 +236,16 @@ INIT_INFRA=true
 $CUSTOM_ENVS"
 
 # ========================
+# STEP 4.5: INFRASTRUCTURE SECRETS (TRAEFIK / CLOUDFLARE)
+# ========================
+printf "\n${YELLOW}>>> BƯỚC 4.5: TRAEFIK & CLOUDFLARE${NC}\n"
+printf "${BLUE}(Bỏ qua nếu bạn không dùng Cloudflare Origin Cert hoặc Traefik Dashboard)${NC}\n"
+
+CLOUDFLARE_ORIGIN_CERT=$(ask "Cloudflare Origin Cert (bỏ qua = Enter)")
+CLOUDFLARE_ORIGIN_KEY=$(ask "Cloudflare Origin Key (bỏ qua = Enter)")
+TRAEFIK_DASHBOARD_AUTH=$(ask "Traefik Dashboard Auth - htpasswd format (bỏ qua = Enter)")
+
+# ========================
 # STEP 5: SECRETS
 # ========================
 printf "\n${YELLOW}>>> BƯỚC 5: GITHUB SECRETS${NC}\n"
@@ -247,7 +257,11 @@ printf "%s" "$SERVER_USER"      | gh secret set SERVER_USER
 gh secret set SSH_PRIVATE_KEY < "$SSH_KEY_PATH"
 
 [ -n "$TELEGRAM_BOT_TOKEN" ] && printf "%s" "$TELEGRAM_BOT_TOKEN" | gh secret set TELEGRAM_BOT_TOKEN
-[ -n "$TELEGRAM_CHAT_ID" ] && printf "%s" "$TELEGRAM_CHAT_ID" | gh secret set TELEGRAM_CHAT_ID
+[ -n "$TELEGRAM_CHAT_ID" ]   && printf "%s" "$TELEGRAM_CHAT_ID"   | gh secret set TELEGRAM_CHAT_ID
+
+[ -n "$CLOUDFLARE_ORIGIN_CERT" ] && printf "%s" "$CLOUDFLARE_ORIGIN_CERT" | gh secret set CLOUDFLARE_ORIGIN_CERT
+[ -n "$CLOUDFLARE_ORIGIN_KEY" ]  && printf "%s" "$CLOUDFLARE_ORIGIN_KEY"  | gh secret set CLOUDFLARE_ORIGIN_KEY
+[ -n "$TRAEFIK_DASHBOARD_AUTH" ] && printf "%s" "$TRAEFIK_DASHBOARD_AUTH" | gh secret set TRAEFIK_DASHBOARD_AUTH
 
 printf "%s" "$ENV_CONTENT" | gh secret set ENV_FILE_CONTENT
 
