@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# (Bỏ exec < /dev/tty ở đây vì nó sẽ làm Bash ngừng đọc code từ pipe khi dùng curl | bash)
+# fix: redirect read from tty per-command for curl | bash compatibility
 
 # ========================
 # COLORS
