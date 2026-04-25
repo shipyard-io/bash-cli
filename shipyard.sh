@@ -43,9 +43,9 @@ ask() {
   printf ": " >&2
 
   if [ "$secret" = "true" ]; then
-    stty -echo
+    stty -echo < /dev/tty
     read -r value < /dev/tty
-    stty echo
+    stty echo < /dev/tty
     printf "\n" >&2
   else
     read -r value < /dev/tty
