@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ========================
-# TTY HANDLING (CRITICAL)
-# ========================
-if [ -e /dev/tty ]; then
-  exec < /dev/tty
-fi
+# (Bỏ exec < /dev/tty ở đây vì nó sẽ làm Bash ngừng đọc code từ pipe khi dùng curl | bash)
 
 # ========================
 # COLORS
@@ -49,11 +44,11 @@ ask() {
 
   if [ "$secret" = "true" ]; then
     stty -echo
-    read -r value
+    read -r value < /dev/tty
     stty echo
     printf "\n" >&2
   else
-    read -r value
+    read -r value < /dev/tty
   fi
 
   echo "${value:-$default}"
@@ -85,7 +80,7 @@ ask_choice() {
       ((i++))
     done
     printf "Chọn (1-%d): " "$((i-1))" >&2
-    read -r idx
+    read -r idx < /dev/tty
     choice="${options[$((idx-1))]}"
   fi
 
@@ -222,8 +217,8 @@ MODE=$(ask_choice "Chọn mode ENV" \
 CUSTOM_ENVS=""
 
 if [[ "$MODE" == *Paste* ]]; then
-  echo "Paste .env (Ctrl+D để kết thúc):"
-  CUSTOM_ENVS=$(cat)
+  echo "Paste .env (Ctrl+D để kết thúc):" >&2
+  CUSTOM_ENVS=$(cat < /dev/tty)
 else
   while true; do
     entry=$(ask "ENV (empty to stop)")
