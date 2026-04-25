@@ -4,10 +4,8 @@ set -euo pipefail
 # ========================
 # TTY HANDLING (CRITICAL)
 # ========================
-if [ -t 0 ] && [ -e /dev/tty ]; then
-  exec </dev/tty
-else
-  echo "[WARN] No TTY detected. Running in non-interactive mode may fail."
+if [ -e /dev/tty ]; then
+  exec < /dev/tty
 fi
 
 # ========================
