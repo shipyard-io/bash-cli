@@ -214,18 +214,64 @@ while true; do
       ;;
 
     ENV_FILE_CONTENT)
-      MODE=$(ask_choice "Nhập ENV như thế nào?" "Paste trực tiếp" "Đọc từ file .env")
+      MODE=$(ask_choice "Nhập ENV như thế nào?" \
+        "Paste trực tiếp" \
+        "Đọc từ file .env" \
+        "Chỉ cập nhật APP_NAME / APP_DOMAIN / HEALTH_CHECK_PATH / INIT_INFRA")
+
       if [[ "$MODE" == *"file"* ]]; then
         ENV_PATH=$(ask "Đường dẫn file .env" ".env")
         if [ ! -f "$ENV_PATH" ]; then
           warn "Không tìm thấy file: $ENV_PATH"
           continue
         fi
-        VALUE=$(cat "$ENV_PATH")
+        BASE_ENV=$(cat "$ENV_PATH")
+      elif [[ "$MODE" == *"Chỉ cập nhật"* ]]; then
+        # Lấy ENV_FILE_CONTENT hiện tại từ GitHub
+        info "Đang lấy ENV_FILE_CONTENT hiện tại từ GitHub..."
+        BASE_ENV=$(gh secret list --json name | grep -q "ENV_FILE_CONTENT" && echo "" || echo "")
+        BASE_ENV=""
+        printf "${YELLOW}(Bỏ qua - sẽ chỉ ghi đè 4 trường bên dưới lên nội dung hiện tại)${NC}\n" >&2
       else
         printf "${BLUE}Paste nội dung .env (Ctrl+D để kết thúc):${NC}\n" >&2
-        VALUE=$(cat < /dev/tty)
+        BASE_ENV=$(cat < /dev/tty)
       fi
+
+      # Hỏi 4 trường resolved quan trọng
+      printf "\n${YELLOW}>>> CẬP NHẬT CÁC TRƯỜNG RESOLVED:${NC}\n" >&2
+      printf "${BLUE}(Nhấn Enter để giữ giá trị hiện tại trong .env, hoặc nhập mới để ghi đè)${NC}\n\n" >&2
+
+      # Parse giá trị hiện tại từ BASE_ENV
+      CUR_APP_NAME=$(echo "$BASE_ENV" | grep "^APP_NAME=" | cut -d= -f2)
+      CUR_APP_DOMAIN=$(echo "$BASE_ENV" | grep "^APP_DOMAIN=" | cut -d= -f2)
+      CUR_HEALTH=$(echo "$BASE_ENV" | grep "^HEALTH_CHECK_PATH=" | cut -d= -f2-)
+      CUR_INIT=$(echo "$BASE_ENV" | grep "^INIT_INFRA=" | cut -d= -f2)
+      CUR_PORT=$(echo "$BASE_ENV" | grep "^APP_PORT=" | cut -d= -f2)
+      CUR_DOMAIN=$(echo "$BASE_ENV" | grep "^DOMAIN=" | cut -d= -f2)
+
+      NEW_APP_NAME=$(ask "APP_NAME" "${CUR_APP_NAME:-}")
+      NEW_APP_DOMAIN=$(ask "APP_DOMAIN" "${CUR_APP_DOMAIN:-}")
+      NEW_HEALTH=$(ask "HEALTH_CHECK_PATH" "${CUR_HEALTH:-/}")
+      NEW_INIT=$(ask "INIT_INFRA" "${CUR_INIT:-true}")
+      NEW_PORT=$(ask "APP_PORT" "${CUR_PORT:-80}")
+      NEW_DOMAIN=$(ask "DOMAIN" "${CUR_DOMAIN:-}")
+
+      # Loại bỏ các key cũ, giữ lại phần còn lại (custom vars)
+      EXTRA_ENVS=$(echo "$BASE_ENV" | grep -v "^APP_NAME=" | grep -v "^APP_DOMAIN=" \
+        | grep -v "^HEALTH_CHECK_PATH=" | grep -v "^INIT_INFRA=" \
+        | grep -v "^APP_PORT=" | grep -v "^DOMAIN=" | grep -v "^$")
+
+      VALUE="APP_NAME=${NEW_APP_NAME}
+APP_PORT=${NEW_PORT}
+APP_DOMAIN=${NEW_APP_DOMAIN}
+DOMAIN=${NEW_DOMAIN}
+HEALTH_CHECK_PATH=${NEW_HEALTH}
+INIT_INFRA=${NEW_INIT}
+${EXTRA_ENVS}"
+
+      printf "\n${BLUE}Preview ENV_FILE_CONTENT:${NC}\n" >&2
+      printf "${CYAN}%s${NC}\n\n" "$VALUE" >&2
+
       if [ -z "$VALUE" ]; then
         warn "Giá trị trống, bỏ qua"
         continue
