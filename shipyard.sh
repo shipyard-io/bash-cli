@@ -147,7 +147,7 @@ SSH_KEY_PATH=$(ask "SSH Private Key" "$HOME/.ssh/id_rsa")
 chmod 600 "$SSH_KEY_PATH" 2>/dev/null || true
 
 info "Checking SSH..."
-if ssh -i "$SSH_KEY_PATH" -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no "${SERVER_USER}@${SERVER_IP}" "exit" >/dev/null 2>&1; then
+if ssh -n -i "$SSH_KEY_PATH" -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no "${SERVER_USER}@${SERVER_IP}" "exit" >/dev/null 2>&1; then
   success "SSH OK"
 else
   error "SSH fail"
