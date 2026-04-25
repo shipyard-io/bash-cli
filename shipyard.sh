@@ -9,10 +9,10 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Hàm in thông báo
-info() { echo -e "${BLUE}[INFO]${NC} $1"; }
-success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
-warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-error() { echo -e "${RED}[ERROR]${NC} $1"; exit 1; }
+info() { echo -e "${BLUE}[INFO]${NC} $*"; }
+success() { echo -e "${GREEN}[SUCCESS]${NC} $*"; }
+warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
+error() { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
 
 echo -e "${CYAN}"
 echo "  ____  _     _                           _ "
@@ -25,9 +25,14 @@ echo -e "${NC}"
 echo -e "--- Shipyard Zero-Touch Setup CLI ---"
 echo ""
 
-# 1. Kiểm tra GitHub CLI
+# 1. Kiểm tra Tools
 if ! command -v gh &> /dev/null; then
     error "GitHub CLI (gh) chưa được cài đặt. Vui lòng cài đặt tại: https://cli.github.com/"
+fi
+
+HAS_DIG=false
+if command -v dig &> /dev/null; then
+    HAS_DIG=true
 fi
 
 if ! gh auth status &> /dev/null; then
@@ -55,6 +60,7 @@ SSH_KEY_PATH=${SSH_KEY_INPUT:-$HOME/.ssh/id_rsa}
 if [ ! -f "$SSH_KEY_PATH" ]; then
     error "Không tìm thấy file SSH key tại: $SSH_KEY_PATH"
 fi
+chmod 600 "$SSH_KEY_PATH" 2>/dev/null
 
 # Kiểm tra SSH
 info "Đang kiểm tra kết nối SSH tới $SERVER_IP..."
@@ -65,13 +71,15 @@ else
 fi
 
 echo ""
-echo -e "${YELLOW}>>> BƯỚC 2: THÔNG BÁO TELEGRAM${NC}"
+echo -e "${YELLOW}>>> BƯỚC 2: THÔNG BÁO TELEGRAM (Optional)${NC}"
 read -p "Nhập Telegram Bot Token (TELEGRAM_BOT_TOKEN): " TELEGRAM_BOT_TOKEN
 read -p "Nhập Telegram Chat ID (TELEGRAM_CHAT_ID): " TELEGRAM_CHAT_ID
 
 echo ""
 echo -e "${YELLOW}>>> BƯỚC 3: CẤU HÌNH ỨNG DỤNG${NC}"
-read -p "Nhập tên ứng dụng (APP_NAME): " APP_NAME
+while [ -z "$APP_NAME" ]; do
+    read -p "Nhập tên ứng dụng (APP_NAME - bắt buộc): " APP_NAME
+done
 read -p "Nhập tên miền Production (APP_DOMAIN): " APP_DOMAIN
 read -p "Nhập tên miền cơ sở (DOMAIN): " DOMAIN
 read -p "Nhập cổng ứng dụng (APP_PORT - mặc định: 80): " APP_PORT
@@ -80,14 +88,20 @@ read -p "Đường dẫn Health Check (mặc định: /): " HEALTH_CHECK_PATH
 HEALTH_CHECK_PATH=${HEALTH_CHECK_PATH:-/}
 
 # Kiểm tra DNS cho APP_DOMAIN
-if [ -n "$APP_DOMAIN" ]; then
+if [ -n "$APP_DOMAIN" ] && [ "$HAS_DIG" = true ]; then
     info "Đang kiểm tra DNS cho $APP_DOMAIN..."
     DOMAIN_IP=$(dig +short "$APP_DOMAIN" | tail -n1)
-    if [ "$DOMAIN_IP" == "$SERVER_IP" ]; then
-        success "Domain $APP_DOMAIN đã trỏ đúng về $SERVER_IP"
+    if [ -n "$DOMAIN_IP" ]; then
+        if [ "$DOMAIN_IP" == "$SERVER_IP" ]; then
+            success "Domain $APP_DOMAIN đã trỏ đúng về $SERVER_IP"
+        else
+            warn "Domain $APP_DOMAIN đang trỏ về IP ($DOMAIN_IP). Vui lòng cập nhật DNS về $SERVER_IP sớm."
+        fi
     else
-        warn "Domain $APP_DOMAIN đang trỏ về IP ($DOMAIN_IP). Vui lòng cập nhật DNS về $SERVER_IP sớm."
+        warn "Không thể tìm thấy bản ghi DNS cho $APP_DOMAIN."
     fi
+elif [ -n "$APP_DOMAIN" ]; then
+    warn "Bỏ qua kiểm tra DNS vì không tìm thấy lệnh 'dig'."
 fi
 
 # 4. Thu thập biến môi trường tùy chỉnh (Custom ENV)
@@ -127,21 +141,24 @@ echo ""
 echo -e "${YELLOW}>>> BƯỚC 5: CÀI ĐẶT GITHUB SECRETS TỰ ĐỘNG${NC}"
 info "Đang thiết lập toàn bộ Secrets cho repo: ${CYAN}$REPO${NC}"
 
-SSH_KEY_DATA=$(cat "$SSH_KEY_PATH")
 
 # Đẩy từng Secret lên GitHub
 info "Cài đặt SERVER_IP..."
-echo "$SERVER_IP" | gh secret set SERVER_IP
+printf "%s" "$SERVER_IP" | gh secret set SERVER_IP
 info "Cài đặt SERVER_USER..."
-echo "$SERVER_USER" | gh secret set SERVER_USER
+printf "%s" "$SERVER_USER" | gh secret set SERVER_USER
 info "Cài đặt SSH_PRIVATE_KEY..."
-echo "$SSH_KEY_DATA" | gh secret set SSH_PRIVATE_KEY
-info "Cài đặt TELEGRAM_BOT_TOKEN..."
-echo "$TELEGRAM_BOT_TOKEN" | gh secret set TELEGRAM_BOT_TOKEN
-info "Cài đặt TELEGRAM_CHAT_ID..."
-echo "$TELEGRAM_CHAT_ID" | gh secret set TELEGRAM_CHAT_ID
+gh secret set SSH_PRIVATE_KEY < "$SSH_KEY_PATH"
+if [ -n "$TELEGRAM_BOT_TOKEN" ]; then
+    info "Cài đặt TELEGRAM_BOT_TOKEN..."
+    printf "%s" "$TELEGRAM_BOT_TOKEN" | gh secret set TELEGRAM_BOT_TOKEN
+fi
+if [ -n "$TELEGRAM_CHAT_ID" ]; then
+    info "Cài đặt TELEGRAM_CHAT_ID..."
+    printf "%s" "$TELEGRAM_CHAT_ID" | gh secret set TELEGRAM_CHAT_ID
+fi
 info "Cài đặt ENV_FILE_CONTENT..."
-echo "$ENV_CONTENT" | gh secret set ENV_FILE_CONTENT
+printf "%s" "$ENV_CONTENT" | gh secret set ENV_FILE_CONTENT
 
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
