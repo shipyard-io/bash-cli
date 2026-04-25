@@ -241,13 +241,13 @@ while true; do
       printf "\n${YELLOW}>>> CẬP NHẬT CÁC TRƯỜNG RESOLVED:${NC}\n" >&2
       printf "${BLUE}(Nhấn Enter để giữ giá trị hiện tại trong .env, hoặc nhập mới để ghi đè)${NC}\n\n" >&2
 
-      # Parse giá trị hiện tại từ BASE_ENV
-      CUR_APP_NAME=$(echo "$BASE_ENV" | grep "^APP_NAME=" | cut -d= -f2)
-      CUR_APP_DOMAIN=$(echo "$BASE_ENV" | grep "^APP_DOMAIN=" | cut -d= -f2)
-      CUR_HEALTH=$(echo "$BASE_ENV" | grep "^HEALTH_CHECK_PATH=" | cut -d= -f2-)
-      CUR_INIT=$(echo "$BASE_ENV" | grep "^INIT_INFRA=" | cut -d= -f2)
-      CUR_PORT=$(echo "$BASE_ENV" | grep "^APP_PORT=" | cut -d= -f2)
-      CUR_DOMAIN=$(echo "$BASE_ENV" | grep "^DOMAIN=" | cut -d= -f2)
+      # Parse giá trị hiện tại từ BASE_ENV (|| true để tránh set -e kill khi grep không tìm thấy)
+      CUR_APP_NAME=$(echo "$BASE_ENV" | grep "^APP_NAME=" | cut -d= -f2 || true)
+      CUR_APP_DOMAIN=$(echo "$BASE_ENV" | grep "^APP_DOMAIN=" | cut -d= -f2 || true)
+      CUR_HEALTH=$(echo "$BASE_ENV" | grep "^HEALTH_CHECK_PATH=" | cut -d= -f2- || true)
+      CUR_INIT=$(echo "$BASE_ENV" | grep "^INIT_INFRA=" | cut -d= -f2 || true)
+      CUR_PORT=$(echo "$BASE_ENV" | grep "^APP_PORT=" | cut -d= -f2 || true)
+      CUR_DOMAIN=$(echo "$BASE_ENV" | grep "^DOMAIN=" | cut -d= -f2 || true)
 
       NEW_APP_NAME=$(ask "APP_NAME" "${CUR_APP_NAME:-}")
       NEW_APP_DOMAIN=$(ask "APP_DOMAIN" "${CUR_APP_DOMAIN:-}")
