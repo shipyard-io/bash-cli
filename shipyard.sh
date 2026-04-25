@@ -47,13 +47,13 @@ fi
 
 # 2. Thu thập thông tin
 echo -e "${YELLOW}>>> BƯỚC 1: THÔNG TIN SERVER${NC}"
-read -p "Nhập địa chỉ IP Server (SERVER_IP): " SERVER_IP
+read -p "Nhập địa chỉ IP Server (SERVER_IP): " SERVER_IP < /dev/tty
 if [ -z "$SERVER_IP" ]; then error "SERVER_IP không được để trống"; fi
 
-read -p "Nhập SSH User (mặc định: root): " SERVER_USER
+read -p "Nhập SSH User (mặc định: root): " SERVER_USER < /dev/tty
 SERVER_USER=${SERVER_USER:-root}
 
-read -p "Đường dẫn tới file SSH Private Key (mặc định: ~/.ssh/id_rsa): " SSH_KEY_INPUT
+read -p "Đường dẫn tới file SSH Private Key (mặc định: ~/.ssh/id_rsa): " SSH_KEY_INPUT < /dev/tty
 SSH_KEY_PATH=${SSH_KEY_INPUT:-$HOME/.ssh/id_rsa}
 
 # Kiểm tra file key sau khi đã có input
@@ -72,19 +72,19 @@ fi
 
 echo ""
 echo -e "${YELLOW}>>> BƯỚC 2: THÔNG BÁO TELEGRAM (Optional)${NC}"
-read -p "Nhập Telegram Bot Token (TELEGRAM_BOT_TOKEN): " TELEGRAM_BOT_TOKEN
-read -p "Nhập Telegram Chat ID (TELEGRAM_CHAT_ID): " TELEGRAM_CHAT_ID
+read -p "Nhập Telegram Bot Token (TELEGRAM_BOT_TOKEN): " TELEGRAM_BOT_TOKEN < /dev/tty
+read -p "Nhập Telegram Chat ID (TELEGRAM_CHAT_ID): " TELEGRAM_CHAT_ID < /dev/tty
 
 echo ""
 echo -e "${YELLOW}>>> BƯỚC 3: CẤU HÌNH ỨNG DỤNG${NC}"
 while [ -z "$APP_NAME" ]; do
-    read -p "Nhập tên ứng dụng (APP_NAME - bắt buộc): " APP_NAME
+    read -p "Nhập tên ứng dụng (APP_NAME - bắt buộc): " APP_NAME < /dev/tty
 done
-read -p "Nhập tên miền Production (APP_DOMAIN): " APP_DOMAIN
-read -p "Nhập tên miền cơ sở (DOMAIN): " DOMAIN
-read -p "Nhập cổng ứng dụng (APP_PORT - mặc định: 80): " APP_PORT
+read -p "Nhập tên miền Production (APP_DOMAIN): " APP_DOMAIN < /dev/tty
+read -p "Nhập tên miền cơ sở (DOMAIN): " DOMAIN < /dev/tty
+read -p "Nhập cổng ứng dụng (APP_PORT - mặc định: 80): " APP_PORT < /dev/tty
 APP_PORT=${APP_PORT:-80}
-read -p "Đường dẫn Health Check (mặc định: /): " HEALTH_CHECK_PATH
+read -p "Đường dẫn Health Check (mặc định: /): " HEALTH_CHECK_PATH < /dev/tty
 HEALTH_CHECK_PATH=${HEALTH_CHECK_PATH:-/}
 
 # Kiểm tra DNS cho APP_DOMAIN
@@ -110,17 +110,17 @@ echo -e "${YELLOW}>>> BƯỚC 4: BIẾN MÔI TRƯỜNG TÙY CHỈNH (Optional)${
 echo -e "Bạn muốn nhập biến môi trường như thế nào?"
 echo "1) Nhập từng dòng (Key=Value)"
 echo "2) Dán nguyên khối (Bulk Paste từ file .env)"
-read -p "Lựa chọn của bạn (1 hoặc 2): " ENV_MODE
+read -p "Lựa chọn của bạn (1 hoặc 2): " ENV_MODE < /dev/tty
 
 CUSTOM_ENVS=""
 if [ "$ENV_MODE" == "2" ]; then
     echo -e "${BLUE}Hãy dán nội dung .env của bạn vào đây.${NC}"
     echo -e "${YELLOW}(Dán xong nhấn Ctrl+D để kết thúc)${NC}"
-    CUSTOM_ENVS=$(cat)
+    CUSTOM_ENVS=$(cat < /dev/tty)
 else
     echo -e "Nhập các biến môi trường (ví dụ: DB_PASSWORD=secret). Nhấn Enter trống để kết thúc."
     while true; do
-        read -p "Nhập biến (KEY=VALUE): " ENV_ENTRY
+        read -p "Nhập biến (KEY=VALUE): " ENV_ENTRY < /dev/tty
         if [ -z "$ENV_ENTRY" ]; then
             break
         fi
