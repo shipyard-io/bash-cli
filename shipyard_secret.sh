@@ -258,9 +258,17 @@ while true; do
       NEW_DOMAIN=$(ask "DOMAIN" "${CUR_DOMAIN:-}")
 
       # Loại bỏ các key cũ, giữ lại phần còn lại (custom vars)
-      EXTRA_ENVS=$(echo "$BASE_ENV" | grep -v "^APP_NAME=" | grep -v "^APP_DOMAIN=" \
-        | grep -v "^HEALTH_CHECK_PATH=" | grep -v "^INIT_INFRA=" \
-        | grep -v "^APP_PORT=" | grep -v "^DOMAIN=" | grep -v "^$")
+      EXTRA_ENVS=""
+      if [ -n "$BASE_ENV" ]; then
+        EXTRA_ENVS=$(echo "$BASE_ENV" \
+          | grep -v "^APP_NAME=" \
+          | grep -v "^APP_DOMAIN=" \
+          | grep -v "^HEALTH_CHECK_PATH=" \
+          | grep -v "^INIT_INFRA=" \
+          | grep -v "^APP_PORT=" \
+          | grep -v "^DOMAIN=" \
+          | grep -v "^$" || true)
+      fi
 
       VALUE="APP_NAME=${NEW_APP_NAME}
 APP_PORT=${NEW_PORT}
