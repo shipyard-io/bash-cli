@@ -1,50 +1,107 @@
-# Shipyard Bash CLI
+# Shipyard Go CLI
 
-An interactive CLI to bootstrap your Shipyard-based projects and automate GitHub Secrets configuration.
+CLI tương tác để bootstrap dự án Shipyard và quản lý GitHub Secrets.
 
-## Features
-- **Zero Config**: Automates the creation of all required GitHub Secrets.
-- **Validation**: Checks SSH connectivity and DNS resolution before setting up.
-- **Notification Setup**: Configures Telegram bots for deployment alerts.
-- **Automation**: Uses GitHub CLI to automatically sync infrastructure and application settings.
+## Lệnh
 
-## Prerequisites
-1. [GitHub CLI (gh)](https://cli.github.com/) installed and authenticated (`gh auth login`).
-2. SSH access to your target VPS.
-3. You should be inside the root directory of your project repository.
+- `setup`: thay cho `shipyard.sh`, cấu hình ban đầu + set secrets.
+- `secrets`: thay cho `shipyard_secret.sh`, cập nhật secrets tương tác.
 
-## Usage
-Run the following command in your terminal:
+## Cài 1 lệnh (khuyến nghị)
+
+Chạy trực tiếp như package:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/shipyard-io/bash-cli/main/shipyard.sh | bash
+curl -fsSL https://raw.githubusercontent.com/shipyard-io/templates/main/bash-cli/install.sh | bash
 ```
 
-## 🔐 Secrets Managed
-The script will interactively ask for information and set the following **GitHub Secrets**:
+Chạy luôn command sau khi cài:
 
-### 🏗️ Infrastructure Secrets
-- `SERVER_IP`: The public IP of your VPS.
-- `SERVER_USER`: SSH username (defaults to `root`).
-- `SSH_PRIVATE_KEY`: Your private key content for secure access.
-
-### 📢 Notification Secrets
-- `TELEGRAM_BOT_TOKEN`: Your Telegram Bot API token.
-- `TELEGRAM_CHAT_ID`: The ID of the chat where notifications will be sent.
-
-### 📝 Application Secret (`ENV_FILE_CONTENT`)
-This secret consolidates app settings into a single block:
-- `APP_NAME`: Your application's identifier.
-- `APP_PORT`: Internal port the app listens on (default: `80`).
-- `APP_DOMAIN`: Your production domain.
-- `HEALTH_CHECK_PATH`: Path for deployment health checks (default: `/`).
-- `INIT_INFRA`: Automatically set to `true` to ensure the first deployment sets up Docker/Traefik.
-
-## Next Steps
-After running the script, simply push your code:
 ```bash
-git add .
-git commit -m "chore: initial shipyard setup"
-git push origin main
+curl -fsSL https://raw.githubusercontent.com/shipyard-io/templates/main/bash-cli/install.sh | bash -s -- setup
+curl -fsSL https://raw.githubusercontent.com/shipyard-io/templates/main/bash-cli/install.sh | bash -s -- secrets
 ```
-The Shipyard pipeline will take over from there!
+
+Script sẽ:
+- Tự detect OS/ARCH
+- Tải binary prebuilt từ GitHub Releases nếu có
+- Nếu chưa có release phù hợp thì fallback build từ source (cần `go`)
+- Cài vào `~/.local/bin/shipyard` (override bằng `SHIPYARD_INSTALL_DIR`)
+
+## Yêu cầu
+
+1. Cài và login GitHub CLI (`gh auth login`)
+2. Có quyền SSH vào VPS
+3. Nếu không có prebuilt binary cho platform của bạn: cần thêm Go + Git để fallback build
+
+## Chạy nhanh
+
+```bash
+cd bash-cli
+go build -o shipyard ./cmd/shipyard
+./shipyard setup
+./shipyard secrets
+```
+
+## Flags mới
+
+```bash
+./shipyard setup --repo owner/repo
+./shipyard setup --non-interactive --repo owner/repo --env-file .env
+
+./shipyard secrets --repo owner/repo
+./shipyard secrets --non-interactive --repo owner/repo --secret ENV_FILE_CONTENT --value-file .env
+```
+
+## Non-interactive Setup
+
+Biến môi trường hỗ trợ:
+
+- `SHIPYARD_SERVER_IP` (required)
+- `SHIPYARD_APP_NAME` (required)
+- `SHIPYARD_SERVER_USER` (default `root`)
+- `SHIPYARD_SSH_KEY_PATH` (default `~/.ssh/id_rsa`)
+- `SHIPYARD_APP_PORT` (default `80`)
+- `SHIPYARD_HEALTH_CHECK_PATH` (default `/`)
+- `SHIPYARD_APP_DOMAIN`
+- `SHIPYARD_DOMAIN`
+- `SHIPYARD_CUSTOM_ENVS` (nhiều dòng `KEY=VALUE`)
+- `SHIPYARD_TELEGRAM_BOT_TOKEN`
+- `SHIPYARD_TELEGRAM_CHAT_ID`
+- `SHIPYARD_CLOUDFLARE_ORIGIN_CERT`
+- `SHIPYARD_CLOUDFLARE_ORIGIN_KEY`
+- `SHIPYARD_TRAEFIK_DASHBOARD_AUTH`
+
+Ví dụ:
+
+```bash
+SHIPYARD_SERVER_IP=1.2.3.4 \
+SHIPYARD_APP_NAME=myapp \
+SHIPYARD_SERVER_USER=ubuntu \
+SHIPYARD_SSH_KEY_PATH=$HOME/.ssh/id_rsa \
+SHIPYARD_APP_PORT=3000 \
+SHIPYARD_HEALTH_CHECK_PATH=/health \
+./shipyard setup --non-interactive --repo your-org/your-repo --env-file .env
+```
+
+## Non-interactive Secrets
+
+```bash
+./shipyard secrets --non-interactive --repo your-org/your-repo --secret SERVER_IP --value 1.2.3.4
+./shipyard secrets --non-interactive --repo your-org/your-repo --secret SSH_PRIVATE_KEY --value-file ~/.ssh/id_rsa
+```
+
+## Tương thích lệnh cũ
+
+Bạn vẫn có thể chạy:
+
+```bash
+./shipyard.sh
+./shipyard_secret.sh
+```
+
+Hai script này giờ chỉ là wrapper mỏng gọi binary Go.
+
+## Ghi chú nhập multiline
+
+Với các trường dạng paste nhiều dòng (`.env`, certificate...), nhập xong dùng một dòng `END` để kết thúc.
